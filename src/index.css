@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --garden-bg: #fef9f0;
+    --garden-soil: #8b6f47;
+    --garden-green: #5a8a4a;
+    --garden-accent: #e8965a;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    background-color: var(--garden-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
+}
