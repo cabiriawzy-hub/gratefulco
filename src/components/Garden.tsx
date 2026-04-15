@@ -185,8 +185,8 @@ function GardenScene({ plants, onPlantClick, newPlantId }: {
       style={{
         position: 'relative',
         width: '100%',
-        height: '60vh',
-        minHeight: '380px',
+        height: '75vh',
+        minHeight: '500px',
         borderRadius: 'var(--radius-xl)',
         overflow: 'hidden',
         background: 'linear-gradient(180deg, #c8e6f5 0%, #dff0e8 40%, #b8d9b0 70%, #8ab87a 100%)',
@@ -231,13 +231,13 @@ function GardenScene({ plants, onPlantClick, newPlantId }: {
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '12px',
+          gap: '16px',
         }}>
-          <p style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', color: '#2D4A2D', textShadow: '0 1px 3px rgba(255,255,255,0.6)' }}>
-            Your garden is waiting to grow.
+          <p style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', color: '#2D4A2D', textShadow: '0 1px 3px rgba(255,255,255,0.6)' }}>
+            🌱 Your garden awaits
           </p>
           <p style={{ fontFamily: 'var(--font-handwriting)', fontSize: '18px', color: '#4A7C59', textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
-            Plant your first gratitude to watch it bloom.
+            Add your first gratitude to plant a flower
           </p>
         </div>
       )}
