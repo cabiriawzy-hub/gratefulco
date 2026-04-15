@@ -39,10 +39,12 @@ create trigger on_auth_user_created
 -- RLS for users
 alter table public.users enable row level security;
 
+drop policy if exists "Users can view own profile" on public.users;
 create policy "Users can view own profile"
   on public.users for select
   using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.users;
 create policy "Users can update own profile"
   on public.users for update
   using (auth.uid() = id);
@@ -72,18 +74,22 @@ create index if not exists entries_hidden       on public.entries(user_id, hidde
 -- RLS for entries
 alter table public.entries enable row level security;
 
+drop policy if exists "Users can view own entries" on public.entries;
 create policy "Users can view own entries"
   on public.entries for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own entries" on public.entries;
 create policy "Users can insert own entries"
   on public.entries for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update own entries" on public.entries;
 create policy "Users can update own entries"
   on public.entries for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete own entries" on public.entries;
 create policy "Users can delete own entries"
   on public.entries for delete
   using (auth.uid() = user_id);
@@ -105,6 +111,7 @@ create table if not exists public.weekly_insights (
 -- RLS for weekly_insights
 alter table public.weekly_insights enable row level security;
 
+drop policy if exists "Users can view own weekly insights" on public.weekly_insights;
 create policy "Users can view own weekly insights"
   on public.weekly_insights for select
   using (auth.uid() = user_id);
