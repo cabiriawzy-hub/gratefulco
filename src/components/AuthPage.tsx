@@ -1,4 +1,4 @@
-// Auth page — sign in / sign up with Supabase email+password.
+// Auth page — sign in / sign up / guest access with Supabase.
 
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -10,6 +10,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -21,7 +22,14 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setMessage({ type: 'error', text: error.message })
     } else {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          // Ensure confirmation email links back to the current app URL (not localhost)
+          emailRedirectTo: window.location.origin,
+        },
+      })
       if (error) {
         setMessage({ type: 'error', text: error.message })
       } else {
@@ -30,6 +38,16 @@ export default function AuthPage() {
     }
 
     setLoading(false)
+  }
+
+  async function handleGuestAccess() {
+    setGuestLoading(true)
+    setMessage(null)
+    const { error } = await supabase.auth.signInAnonymously()
+    if (error) {
+      setMessage({ type: 'error', text: 'Guest mode unavailable. Please sign in or create an account.' })
+    }
+    setGuestLoading(false)
   }
 
   return (
@@ -93,6 +111,34 @@ export default function AuthPage() {
             ) : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-amber-100" />
+          <span className="text-xs text-amber-400">or</span>
+          <div className="flex-1 h-px bg-amber-100" />
+        </div>
+
+        {/* Guest access */}
+        <button
+          onClick={handleGuestAccess}
+          disabled={guestLoading}
+          className="w-full py-2.5 border border-amber-200 hover:bg-amber-50 disabled:opacity-50 text-amber-700 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+        >
+          {guestLoading ? (
+            <>
+              <span className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
+              Entering as guest…
+            </>
+          ) : (
+            <>
+              <span>🌿</span> Continue as guest
+            </>
+          )}
+        </button>
+        <p className="text-center text-xs text-amber-400 mt-2">
+          Your garden is saved locally. Sign up to keep it across devices.
+        </p>
       </div>
     </div>
   )

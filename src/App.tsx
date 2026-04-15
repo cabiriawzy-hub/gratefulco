@@ -8,6 +8,7 @@ function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
 
   useEffect(() => {
+    // getSession also handles token exchange from email confirmation URL hash
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => subscription.unsubscribe()
@@ -32,9 +33,15 @@ function App() {
         <div className="flex items-center gap-3">
           {session && (
             <>
-              <span className="text-sm text-amber-600 hidden sm:block">
-                {session.user.email}
-              </span>
+              {session.user.is_anonymous ? (
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg">
+                  Guest
+                </span>
+              ) : (
+                <span className="text-sm text-amber-600 hidden sm:block">
+                  {session.user.email}
+                </span>
+              )}
               <button
                 onClick={() => supabase.auth.signOut()}
                 className="text-xs text-amber-500 hover:text-amber-700 transition-colors px-2 py-1 rounded hover:bg-amber-100"
@@ -48,7 +55,24 @@ function App() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {session ? <Garden /> : <AuthPage />}
+        {session ? (
+          <>
+            {session.user.is_anonymous && (
+              <div className="mb-6 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
+                <span className="text-amber-700">
+                  🌱 You're in guest mode — your garden lives here on this device.
+                </span>
+                <button
+                  onClick={() => supabase.auth.signOut()}
+                  className="shrink-0 text-xs font-medium text-amber-600 hover:text-amber-800 underline"
+                >
+                  Create account
+                </button>
+              </div>
+            )}
+            <Garden />
+          </>
+        ) : <AuthPage />}
       </main>
     </div>
   )
