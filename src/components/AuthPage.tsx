@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { GUEST_MODE_KEY } from '../lib/localStore'
 
+// Full app URL including base path (e.g. /gratefulco/ on GitHub Pages)
+const APP_URL = window.location.origin + import.meta.env.BASE_URL
+
 type Mode = 'signin' | 'signup' | 'forgot' | 'magic'
 
 export default function AuthPage({ onGuest }: { onGuest: () => void }) {
@@ -29,7 +32,7 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
         password,
         options: {
           // Ensure confirmation email links back to the current app URL (not localhost)
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: APP_URL,
         },
       })
       if (error) {
@@ -40,7 +43,7 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
       }
     } else if (mode === 'forgot') {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo: APP_URL,
       })
       if (error) {
         setMessage({ type: 'error', text: error.message })
@@ -50,7 +53,7 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
     } else if (mode === 'magic') {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin },
+        options: { emailRedirectTo: APP_URL },
       })
       if (error) {
         setMessage({ type: 'error', text: error.message })
@@ -69,7 +72,7 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: pendingConfirmEmail,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: APP_URL },
     })
     if (error) {
       setMessage({ type: 'error', text: error.message })
