@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { GUEST_MODE_KEY } from '../lib/localStore'
 
 type Mode = 'signin' | 'signup'
 
-export default function AuthPage() {
+export default function AuthPage({ onGuest }: { onGuest: () => void }) {
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [guestLoading, setGuestLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,14 +40,9 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  async function handleGuestAccess() {
-    setGuestLoading(true)
-    setMessage(null)
-    const { error } = await supabase.auth.signInAnonymously()
-    if (error) {
-      setMessage({ type: 'error', text: 'Guest mode unavailable. Please sign in or create an account.' })
-    }
-    setGuestLoading(false)
+  function handleGuestAccess() {
+    localStorage.setItem(GUEST_MODE_KEY, '1')
+    onGuest()
   }
 
   return (
@@ -122,19 +117,9 @@ export default function AuthPage() {
         {/* Guest access */}
         <button
           onClick={handleGuestAccess}
-          disabled={guestLoading}
-          className="w-full py-2.5 border border-amber-200 hover:bg-amber-50 disabled:opacity-50 text-amber-700 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full py-2.5 border border-amber-200 hover:bg-amber-50 text-amber-700 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
         >
-          {guestLoading ? (
-            <>
-              <span className="w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
-              Entering as guest…
-            </>
-          ) : (
-            <>
-              <span>🌿</span> Continue as guest
-            </>
-          )}
+          <span>🌿</span> Continue as guest
         </button>
         <p className="text-center text-xs text-amber-400 mt-2">
           Your garden is saved locally. Sign up to keep it across devices.

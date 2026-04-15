@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { api, type GardenPlant } from '../lib/api'
+import { localStore } from '../lib/localStore'
 import AddEntryModal from './AddEntryModal'
 
 // ---------------------------------------------------------------------------
@@ -83,19 +84,24 @@ function GardenGrid({ plants, onPlantClick }: { plants: GardenPlant[]; onPlantCl
 // ---------------------------------------------------------------------------
 // Garden component
 // ---------------------------------------------------------------------------
-export default function Garden() {
+export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
   const [plants, setPlants] = useState<GardenPlant[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [selectedPlant, setSelectedPlant] = useState<GardenPlant | null>(null)
 
   const fetchGarden = useCallback(async () => {
+    if (isGuest) {
+      setPlants(localStore.getPlants())
+      setLoading(false)
+      return
+    }
     const { data, error } = await api.garden.get()
     if (!error && data) {
       setPlants(data.plants)
     }
     setLoading(false)
-  }, [])
+  }, [isGuest])
 
   useEffect(() => { fetchGarden() }, [fetchGarden])
 
@@ -176,7 +182,7 @@ export default function Garden() {
 
       {/* Add entry modal */}
       {showModal && (
-        <AddEntryModal onClose={() => setShowModal(false)} onAdded={handleAdded} />
+        <AddEntryModal onClose={() => setShowModal(false)} onAdded={handleAdded} isGuest={isGuest} />
       )}
     </div>
   )

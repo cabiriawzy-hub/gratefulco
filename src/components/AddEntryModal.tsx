@@ -2,15 +2,17 @@
 
 import { useState } from 'react'
 import { api } from '../lib/api'
+import { localStore } from '../lib/localStore'
 
 interface Props {
   onClose: () => void
   onAdded: () => void
+  isGuest?: boolean
 }
 
 const MAX_CHARS = 280
 
-export default function AddEntryModal({ onClose, onAdded }: Props) {
+export default function AddEntryModal({ onClose, onAdded, isGuest = false }: Props) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +25,14 @@ export default function AddEntryModal({ onClose, onAdded }: Props) {
 
     setLoading(true)
     setError(null)
+
+    if (isGuest) {
+      localStore.addEntry(text.trim())
+      setLoading(false)
+      onAdded()
+      onClose()
+      return
+    }
 
     const { error: apiError } = await api.entries.create(text.trim(), timezone)
     setLoading(false)
