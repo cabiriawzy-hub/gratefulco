@@ -45,8 +45,18 @@ function App() {
   // Loading auth state (only when not in guest mode)
   if (session === undefined && !isGuest) {
     return (
-      <div className="min-h-svh bg-amber-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin" />
+      <div
+        className="min-h-svh flex items-center justify-center"
+        style={{ background: 'var(--color-cloud-white)' }}
+      >
+        <div
+          className="w-8 h-8 rounded-full border-4"
+          style={{
+            borderColor: 'var(--color-sage-mist)',
+            borderTopColor: 'var(--color-garden-green)',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
       </div>
     )
   }
@@ -54,47 +64,106 @@ function App() {
   const showApp = session || isGuest
 
   return (
-    <div className="min-h-svh bg-amber-50">
-      <header className="border-b border-amber-200 bg-white/80 backdrop-blur-sm px-6 py-4 flex items-center justify-between">
+    <div className="min-h-svh" style={{ background: 'var(--color-cloud-white)' }}>
+      {/* Header */}
+      <header
+        className="sticky top-0 z-30 border-b px-6 py-4 flex items-center justify-between backdrop-blur-sm"
+        style={{
+          background: 'rgba(250,249,246,0.85)',
+          borderColor: 'var(--color-sage-mist)',
+        }}
+      >
         <div className="flex items-center gap-3">
-          <span className="text-2xl">🌱</span>
-          <span className="font-semibold text-amber-900 tracking-tight">GratefulCo</span>
+          {/* Logo leaf SVG */}
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <ellipse cx="14" cy="16" rx="10" ry="12" fill="var(--color-garden-green)" opacity="0.15" />
+            <path
+              d="M14 24 C14 24 6 18 6 11 C6 7 9.5 4 14 4 C18.5 4 22 7 22 11 C22 18 14 24 14 24Z"
+              fill="var(--color-garden-green)"
+            />
+            <path
+              d="M14 24 L14 10"
+              stroke="var(--color-cloud-white)"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span
+            className="text-xl font-semibold tracking-tight"
+            style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-soil-dark)' }}
+          >
+            GratefulCo
+          </span>
         </div>
+
         <div className="flex items-center gap-3">
           {showApp && (
             <>
               {isGuest ? (
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-lg">
+                <span
+                  className="text-xs px-3 py-1 rounded-full font-medium"
+                  style={{
+                    background: 'var(--color-sage-mist)',
+                    color: 'var(--color-garden-green)',
+                  }}
+                >
                   Guest
                 </span>
               ) : (
-                <span className="text-sm text-amber-600 hidden sm:block">
+                <span
+                  className="text-sm hidden sm:block"
+                  style={{ color: 'var(--color-pebble-gray)' }}
+                >
                   {session?.user.email}
                 </span>
               )}
               <button
                 onClick={isGuest ? handleGuestSignOut : () => supabase.auth.signOut()}
-                className="text-xs text-amber-500 hover:text-amber-700 transition-colors px-2 py-1 rounded hover:bg-amber-100"
+                className="text-xs font-medium px-3 py-1.5 rounded-full transition-all"
+                style={{
+                  color: 'var(--color-garden-green)',
+                  border: '1px solid var(--color-sage-mist)',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-sage-mist)'
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                }}
               >
                 {isGuest ? 'Sign in' : 'Sign out'}
               </button>
             </>
           )}
-          {!showApp && <span className="text-sm text-amber-600">Your Gratitude Garden</span>}
+          {!showApp && (
+            <span
+              className="text-sm"
+              style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-handwriting)', fontSize: '16px' }}
+            >
+              Your Gratitude Garden
+            </span>
+          )}
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-8 page-content">
         {showApp ? (
           <>
             {isGuest && (
-              <div className="mb-6 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
-                <span className="text-amber-700">
-                  🌱 You're in guest mode — your garden is saved in this browser.
+              <div
+                className="mb-6 flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm"
+                style={{
+                  background: 'var(--color-dewdrop)',
+                  border: '1px solid var(--color-sage-mist)',
+                }}
+              >
+                <span style={{ color: 'var(--color-soil-dark)' }}>
+                  🌱 You&rsquo;re in guest mode — your garden lives in this browser.
                 </span>
                 <button
                   onClick={handleGuestSignOut}
-                  className="shrink-0 text-xs font-medium text-amber-600 hover:text-amber-800 underline"
+                  className="shrink-0 text-xs font-semibold underline"
+                  style={{ color: 'var(--color-garden-green)' }}
                 >
                   Create account
                 </button>

@@ -95,25 +95,107 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
 
   const isMagicOrForgot = mode === 'magic' || mode === 'forgot'
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 16px',
+    borderRadius: 'var(--radius-md)',
+    border: '1.5px solid var(--color-sage-mist)',
+    background: 'var(--color-dewdrop)',
+    color: 'var(--color-soil-dark)',
+    fontFamily: 'var(--font-body)',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color var(--duration-fast), box-shadow var(--duration-fast)',
+    boxSizing: 'border-box' as const,
+  }
+
+  function handleInputFocus(e: React.FocusEvent<HTMLInputElement>) {
+    e.currentTarget.style.borderColor = 'var(--color-garden-green)'
+    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(74,124,89,0.12)'
+  }
+  function handleInputBlur(e: React.FocusEvent<HTMLInputElement>) {
+    e.currentTarget.style.borderColor = 'var(--color-sage-mist)'
+    e.currentTarget.style.boxShadow = 'none'
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-8">
+    <div className="flex flex-col items-center justify-center py-16 gap-8 page-content">
+      {/* Hero */}
       <div className="text-center">
-        <div className="text-6xl mb-4">🌱</div>
-        <h1 className="text-2xl font-bold text-amber-900">GratefulCo</h1>
-        <p className="text-amber-600 mt-1 text-sm">Your daily gratitude garden</p>
+        <div className="flex justify-center mb-4">
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="var(--color-sage-mist)" />
+            <path
+              d="M32 54 C32 54 16 44 16 30 C16 21 23 14 32 14 C41 14 48 21 48 30 C48 44 32 54 32 54Z"
+              fill="var(--color-garden-green)"
+            />
+            <path
+              d="M32 54 L32 24"
+              stroke="var(--color-cloud-white)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M32 36 C27 30 21 30 21 24 C21 20 26 18 32 22"
+              stroke="var(--color-cloud-white)"
+              strokeWidth="1.5"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <h1
+          className="text-3xl font-bold"
+          style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-soil-dark)' }}
+        >
+          GratefulCo
+        </h1>
+        <p
+          className="mt-2"
+          style={{
+            color: 'var(--color-pebble-gray)',
+            fontFamily: 'var(--font-handwriting)',
+            fontSize: '18px',
+          }}
+        >
+          Your daily gratitude garden
+        </p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-amber-100 p-8 w-full max-w-sm">
-        {/* Mode tabs — only for main signin/signup */}
+      {/* Auth card */}
+      <div
+        className="w-full max-w-sm p-8"
+        style={{
+          background: 'white',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--color-dewdrop)',
+        }}
+      >
+        {/* Mode tabs */}
         {!isMagicOrForgot && (
-          <div className="flex rounded-xl bg-amber-50 p-1 mb-6">
+          <div
+            className="flex p-1 mb-6"
+            style={{
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-dewdrop)',
+            }}
+          >
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => switchMode(m)}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors capitalize ${
-                  mode === m ? 'bg-white text-amber-900 shadow-sm' : 'text-amber-600 hover:text-amber-800'
-                }`}
+                className="flex-1 py-2 text-sm font-medium capitalize transition-all"
+                style={{
+                  borderRadius: 'var(--radius-sm)',
+                  background: mode === m ? 'white' : 'transparent',
+                  color: mode === m ? 'var(--color-soil-dark)' : 'var(--color-pebble-gray)',
+                  boxShadow: mode === m ? 'var(--shadow-sm)' : 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                  transition: 'all var(--duration-fast) var(--ease-gentle)',
+                }}
               >
                 {m === 'signin' ? 'Sign in' : 'Sign up'}
               </button>
@@ -126,17 +208,23 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
           <div className="mb-6">
             <button
               onClick={() => switchMode('signin')}
-              className="text-xs text-amber-500 hover:text-amber-700 mb-4 flex items-center gap-1"
+              className="text-xs mb-4 flex items-center gap-1 transition-colors"
+              style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-body)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-garden-green)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-pebble-gray)' }}
             >
               ← Back to sign in
             </button>
-            <h2 className="text-base font-semibold text-amber-900">
+            <h2
+              className="text-base font-semibold"
+              style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-soil-dark)' }}
+            >
               {mode === 'forgot' ? 'Reset your password' : 'Sign in with magic link'}
             </h2>
-            <p className="text-xs text-amber-500 mt-1">
+            <p className="text-xs mt-1" style={{ color: 'var(--color-pebble-gray)' }}>
               {mode === 'forgot'
                 ? "We'll email you a link to reset your password."
-                : "We'll send a one-click sign-in link — works even if you haven't confirmed your account yet."}
+                : "We'll send a one-click sign-in link to your inbox."}
             </p>
           </div>
         )}
@@ -148,10 +236,11 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent text-sm"
+            style={inputStyle}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
           />
 
-          {/* Password field — only for signin/signup */}
           {!isMagicOrForgot && (
             <input
               type="password"
@@ -160,12 +249,20 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent text-sm"
+              style={inputStyle}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
             />
           )}
 
           {message && (
-            <p className={`text-sm rounded-lg px-3 py-2 ${message.type === 'error' ? 'text-red-600 bg-red-50' : 'text-green-700 bg-green-50'}`}>
+            <p
+              className="text-sm px-3 py-2 rounded-lg"
+              style={{
+                color: message.type === 'error' ? 'var(--color-error)' : 'var(--color-success)',
+                background: message.type === 'error' ? '#FDF0F0' : '#F0F9F0',
+              }}
+            >
               {message.text}
             </p>
           )}
@@ -173,11 +270,40 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 text-sm font-semibold rounded-full flex items-center justify-center gap-2 transition-all"
+            style={{
+              background: loading ? 'var(--color-sage-mist)' : 'var(--color-garden-green)',
+              color: 'var(--color-cloud-white)',
+              boxShadow: loading ? 'none' : 'var(--shadow-md)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-body)',
+              border: 'none',
+            }}
+            onMouseEnter={(e) => {
+              const btn = e.currentTarget as HTMLButtonElement
+              if (btn.disabled) return
+              btn.style.background = '#3D6B4A'
+              btn.style.transform = 'translateY(-1px)'
+              btn.style.boxShadow = 'var(--shadow-lg)'
+            }}
+            onMouseLeave={(e) => {
+              const btn = e.currentTarget as HTMLButtonElement
+              if (btn.disabled) return
+              btn.style.background = 'var(--color-garden-green)'
+              btn.style.transform = ''
+              btn.style.boxShadow = 'var(--shadow-md)'
+            }}
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                <span
+                  className="w-4 h-4 rounded-full border-2 inline-block"
+                  style={{
+                    borderColor: 'rgba(255,255,255,0.4)',
+                    borderTopColor: 'white',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
                 Sending…
               </>
             ) : mode === 'signin' ? 'Sign in'
@@ -187,14 +313,20 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
           </button>
         </form>
 
-        {/* Resend confirmation — shown after signup */}
+        {/* Resend confirmation */}
         {pendingConfirmEmail && (
-          <div className="mt-4 p-3 bg-amber-50 rounded-xl text-center">
-            <p className="text-xs text-amber-600 mb-2">Didn't get the email?</p>
+          <div
+            className="mt-4 p-3 text-center rounded-xl"
+            style={{ background: 'var(--color-dewdrop)' }}
+          >
+            <p className="text-xs mb-2" style={{ color: 'var(--color-pebble-gray)' }}>
+              Didn&rsquo;t get the email?
+            </p>
             <button
               onClick={handleResendConfirmation}
               disabled={loading}
-              className="text-xs font-medium text-amber-700 hover:text-amber-900 underline disabled:opacity-50"
+              className="text-xs font-semibold underline"
+              style={{ color: 'var(--color-garden-green)', cursor: loading ? 'not-allowed' : 'pointer' }}
             >
               Resend confirmation email
             </button>
@@ -206,13 +338,19 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
           <div className="flex justify-between mt-3">
             <button
               onClick={() => switchMode('forgot')}
-              className="text-xs text-amber-400 hover:text-amber-600"
+              className="text-xs transition-colors"
+              style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-body)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-garden-green)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-pebble-gray)' }}
             >
               Forgot password?
             </button>
             <button
               onClick={() => switchMode('magic')}
-              className="text-xs text-amber-400 hover:text-amber-600"
+              className="text-xs transition-colors"
+              style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-body)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-garden-green)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-pebble-gray)' }}
             >
               Email magic link
             </button>
@@ -221,19 +359,36 @@ export default function AuthPage({ onGuest }: { onGuest: () => void }) {
 
         {/* Divider */}
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-amber-100" />
-          <span className="text-xs text-amber-400">or</span>
-          <div className="flex-1 h-px bg-amber-100" />
+          <div className="flex-1 h-px" style={{ background: 'var(--color-dewdrop)' }} />
+          <span className="text-xs" style={{ color: 'var(--color-pebble-gray)' }}>or</span>
+          <div className="flex-1 h-px" style={{ background: 'var(--color-dewdrop)' }} />
         </div>
 
         {/* Guest access */}
         <button
           onClick={handleGuestAccess}
-          className="w-full py-2.5 border border-amber-200 hover:bg-amber-50 text-amber-700 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3 text-sm font-medium flex items-center justify-center gap-2 transition-all rounded-full"
+          style={{
+            border: '1.5px solid var(--color-sage-mist)',
+            color: 'var(--color-garden-green)',
+            background: 'transparent',
+            fontFamily: 'var(--font-body)',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement
+            btn.style.background = 'var(--color-dewdrop)'
+            btn.style.borderColor = 'var(--color-garden-green)'
+          }}
+          onMouseLeave={(e) => {
+            const btn = e.currentTarget as HTMLButtonElement
+            btn.style.background = 'transparent'
+            btn.style.borderColor = 'var(--color-sage-mist)'
+          }}
         >
-          <span>🌿</span> Continue as guest
+          🌿 Continue as guest
         </button>
-        <p className="text-center text-xs text-amber-400 mt-2">
+        <p className="text-center text-xs mt-2" style={{ color: 'var(--color-pebble-gray)' }}>
           Your garden is saved locally. Sign up to keep it across devices.
         </p>
       </div>

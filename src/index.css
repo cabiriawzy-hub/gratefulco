@@ -2,20 +2,141 @@
 
 @layer base {
   :root {
-    --garden-bg: #fef9f0;
-    --garden-soil: #8b6f47;
-    --garden-green: #5a8a4a;
-    --garden-accent: #e8965a;
+    /* ── Colors ── */
+    --color-garden-green:   #4A7C59;
+    --color-leaf-light:     #7FB08A;
+    --color-sage-mist:      #C8DFC8;
+    --color-blossom-pink:   #E8A0B0;
+    --color-sunflower-gold: #F5C842;
+    --color-lavender-dusk:  #B8A0D8;
+    --color-peach-warm:     #F5C8A0;
+    --color-soil-dark:      #2D1F14;
+    --color-pebble-gray:    #6B6B6B;
+    --color-cloud-white:    #FAF9F6;
+    --color-dewdrop:        #F0F4F0;
+    --color-success:        #5BA85A;
+    --color-warning:        #D4873A;
+    --color-error:          #C85A5A;
+
+    /* ── Typography ── */
+    --font-heading:     'Lora', Georgia, serif;
+    --font-body:        'Inter', 'Helvetica Neue', sans-serif;
+    --font-handwriting: 'Caveat', cursive;
+
+    /* ── Spacing ── */
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-6:  24px;
+    --space-8:  32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-24: 96px;
+
+    /* ── Radii ── */
+    --radius-sm:   6px;
+    --radius-md:   12px;
+    --radius-lg:   20px;
+    --radius-xl:   32px;
+    --radius-full: 9999px;
+
+    /* ── Shadows ── */
+    --shadow-sm:    0 1px 3px rgba(45,31,20,0.08);
+    --shadow-md:    0 4px 12px rgba(45,31,20,0.10);
+    --shadow-lg:    0 8px 24px rgba(45,31,20,0.12);
+    --shadow-float: 0 16px 40px rgba(45,31,20,0.14);
+
+    /* ── Animation ── */
+    --duration-instant: 80ms;
+    --duration-fast:   150ms;
+    --duration-normal: 250ms;
+    --duration-slow:   400ms;
+    --duration-bloom:  600ms;
+    --duration-sway:  3000ms;
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-gentle: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-sway:   ease-in-out;
   }
 
   body {
     margin: 0;
-    font-family: system-ui, -apple-system, sans-serif;
-    background-color: var(--garden-bg);
+    font-family: var(--font-body);
+    background-color: var(--color-cloud-white);
+    color: var(--color-soil-dark);
     -webkit-font-smoothing: antialiased;
   }
 
   #root {
     min-height: 100svh;
+  }
+
+  /* Focus rings for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--color-garden-green);
+    outline-offset: 3px;
+  }
+}
+
+/* ── Keyframe Animations ── */
+@keyframes bloom {
+  0%   { transform: scale(0) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+  80%  { transform: scale(0.95) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50%       { transform: rotate(2deg) translateY(-2px); }
+}
+
+@keyframes grow {
+  from { transform: scaleY(0); transform-origin: bottom; opacity: 0.4; }
+  to   { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes petal-fly {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx, 40px), var(--dy, -60px)) rotate(720deg) scale(0); opacity: 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Animation Utility Classes ── */
+@media (prefers-reduced-motion: no-preference) {
+  .plant-new {
+    animation: bloom var(--duration-bloom) var(--ease-spring) forwards;
+  }
+
+  .plant-sway {
+    transform-origin: bottom center;
+    animation: sway var(--duration-sway) var(--ease-sway) infinite;
+  }
+
+  .plant-stage-advance {
+    animation: grow var(--duration-slow) var(--ease-spring) forwards;
+  }
+
+  .petal-particle {
+    animation: petal-fly 1.2s var(--ease-gentle) forwards;
+  }
+
+  .page-content {
+    animation: page-enter var(--duration-normal) var(--ease-gentle);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
