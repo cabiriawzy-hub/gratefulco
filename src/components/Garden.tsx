@@ -1,173 +1,246 @@
-// Garden — the main canvas where plants are displayed.
-// Phase 2: real plants from Supabase via /api/v1/garden.
+// Garden — immersive full-screen garden scene inspired by 花花land.
+// Each journal entry becomes a flower scattered naturally across a layered landscape.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api, type GardenPlant } from '../lib/api'
 import { localStore } from '../lib/localStore'
 import AddEntryModal from './AddEntryModal'
 
 // ---------------------------------------------------------------------------
-// SVG Plant components — 4 growth stages per the design spec
+// Deterministic pseudo-random from a seed string
 // ---------------------------------------------------------------------------
+function seededRand(seed: string) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0
+  }
+  return () => {
+    h ^= h << 13; h ^= h >> 17; h ^= h << 5
+    return (h >>> 0) / 0xFFFFFFFF
+  }
+}
 
-function PlantSVG({ stage, color }: { stage: number; color: string }) {
-  const s = Math.min(Math.max(stage, 1), 4)
+// ---------------------------------------------------------------------------
+// Flower SVG components — painterly, varied by category
+// ---------------------------------------------------------------------------
+const FLOWER_COLORS: Record<string, { petal: string; center: string }> = {
+  people:   { petal: '#E8A0B0', center: '#F5C842' },
+  health:   { petal: '#7FB08A', center: '#FAF9F6' },
+  work:     { petal: '#F5C842', center: '#F5C8A0' },
+  moments:  { petal: '#B8A0D8', center: '#FAF9F6' },
+  nature:   { petal: '#7FB08A', center: '#F5C842' },
+  learning: { petal: '#B8A0D8', center: '#F5C842' },
+  default:  { petal: '#E8A0B0', center: '#F5C842' },
+}
 
-  if (s === 1) {
-    return (
-      <svg width="32" height="48" viewBox="0 0 32 56" aria-label={`Sprout (stage 1)`}>
-        <line x1="16" y1="48" x2="16" y2="32" stroke="var(--color-garden-green)" strokeWidth="2" strokeLinecap="round" />
-        <ellipse cx="11" cy="30" rx="5" ry="3" fill="var(--color-leaf-light)" transform="rotate(-30 11 30)" />
-        <ellipse cx="21" cy="30" rx="5" ry="3" fill="var(--color-leaf-light)" transform="rotate(30 21 30)" />
-      </svg>
-    )
-  }
-  if (s === 2) {
-    return (
-      <svg width="32" height="48" viewBox="0 0 32 56" aria-label={`Budding plant (stage 2)`}>
-        <line x1="16" y1="48" x2="16" y2="18" stroke="var(--color-garden-green)" strokeWidth="2.5" strokeLinecap="round" />
-        <ellipse cx="10" cy="36" rx="7" ry="4" fill="var(--color-leaf-light)" transform="rotate(-20 10 36)" />
-        <ellipse cx="22" cy="30" rx="7" ry="4" fill="var(--color-leaf-light)" transform="rotate(20 22 30)" />
-        <ellipse cx="16" cy="16" rx="5" ry="7" fill={color} />
-      </svg>
-    )
-  }
-  if (s === 3) {
-    return (
-      <svg width="32" height="48" viewBox="0 0 32 56" aria-label={`Blooming plant (stage 3)`}>
-        <line x1="16" y1="52" x2="16" y2="22" stroke="var(--color-garden-green)" strokeWidth="3" strokeLinecap="round" />
-        <ellipse cx="8" cy="40" rx="9" ry="5" fill="var(--color-leaf-light)" transform="rotate(-25 8 40)" />
-        <ellipse cx="24" cy="38" rx="9" ry="5" fill="var(--color-leaf-light)" transform="rotate(25 24 38)" />
-        <circle cx="16" cy="10" r="6" fill={color} opacity="0.9" />
-        <circle cx="22" cy="14" r="5" fill={color} opacity="0.8" />
-        <circle cx="22" cy="6" r="5" fill="var(--color-peach-warm)" opacity="0.8" />
-        <circle cx="10" cy="6" r="5" fill={color} opacity="0.8" />
-        <circle cx="10" cy="14" r="5" fill="var(--color-peach-warm)" opacity="0.8" />
-        <circle cx="16" cy="10" r="4" fill="var(--color-sunflower-gold)" />
-      </svg>
-    )
-  }
-  // Stage 4 — Flourishing
+function TulipSVG({ petal, center, scale = 1 }: { petal: string; center: string; scale?: number }) {
+  const w = 28 * scale, h = 44 * scale
   return (
-    <svg width="32" height="48" viewBox="0 0 32 56" aria-label={`Flourishing plant (stage 4)`}>
-      <path d="M16 56 C16 40 14 30 16 18" stroke="var(--color-garden-green)" strokeWidth="3" fill="none" strokeLinecap="round" />
-      <path d="M16 38 C10 32 6 28 8 22" stroke="var(--color-garden-green)" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M16 42 C8 38 4 44 8 46 C12 48 16 42 16 42Z" fill="var(--color-leaf-light)" />
-      <path d="M16 34 C24 30 28 36 24 38 C20 40 16 34 16 34Z" fill="var(--color-leaf-light)" />
-      <circle cx="16" cy="12" r="3" fill="var(--color-sunflower-gold)" />
-      <circle cx="16" cy="5" r="5" fill={color} />
-      <circle cx="23" cy="9" r="4.5" fill={color} opacity="0.85" />
-      <circle cx="23" cy="15" r="4.5" fill="var(--color-peach-warm)" opacity="0.85" />
-      <circle cx="9" cy="15" r="4.5" fill={color} opacity="0.85" />
-      <circle cx="9" cy="9" r="4.5" fill="var(--color-peach-warm)" opacity="0.85" />
-      <circle cx="8" cy="18" r="2" fill="var(--color-sunflower-gold)" />
-      <circle cx="5" cy="14" r="3.5" fill="var(--color-lavender-dusk)" opacity="0.8" />
-      <circle cx="11" cy="13" r="3.5" fill="var(--color-lavender-dusk)" opacity="0.8" />
-      <circle cx="8" cy="10" r="3.5" fill="var(--color-lavender-dusk)" opacity="0.8" />
+    <svg width={w} height={h} viewBox="0 0 28 44" fill="none">
+      <line x1="14" y1="44" x2="14" y2="20" stroke="#4A7C59" strokeWidth="2" strokeLinecap="round"/>
+      <ellipse cx="9" cy="32" rx="5" ry="3" fill="#7FB08A" transform="rotate(-25 9 32)"/>
+      <ellipse cx="19" cy="28" rx="5" ry="3" fill="#7FB08A" transform="rotate(25 19 28)"/>
+      <ellipse cx="14" cy="12" rx="6" ry="9" fill={petal} opacity="0.9"/>
+      <ellipse cx="8" cy="16" rx="5" ry="8" fill={petal} opacity="0.75" transform="rotate(-15 8 16)"/>
+      <ellipse cx="20" cy="16" rx="5" ry="8" fill={petal} opacity="0.75" transform="rotate(15 20 16)"/>
+      <ellipse cx="14" cy="14" rx="3" ry="4" fill={center} opacity="0.6"/>
     </svg>
   )
 }
 
-// Category → petal color mapping (from design spec plant species)
-const CATEGORY_PETAL: Record<string, string> = {
-  people:   'var(--color-blossom-pink)',   // Rose / Cherry blossom
-  health:   'var(--color-leaf-light)',     // Fern / herb
-  work:     'var(--color-sunflower-gold)', // Sunflower
-  moments:  'var(--color-blossom-pink)',   // Daisy
-  nature:   'var(--color-leaf-light)',     // Fern
-  learning: 'var(--color-lavender-dusk)',  // Lavender
-  default:  'var(--color-blossom-pink)',
+function DaisySVG({ petal, center, scale = 1 }: { petal: string; center: string; scale?: number }) {
+  const w = 32 * scale, h = 48 * scale
+  return (
+    <svg width={w} height={h} viewBox="0 0 32 48" fill="none">
+      <line x1="16" y1="48" x2="16" y2="22" stroke="#4A7C59" strokeWidth="2" strokeLinecap="round"/>
+      <ellipse cx="10" cy="36" rx="6" ry="3.5" fill="#7FB08A" transform="rotate(-20 10 36)"/>
+      <ellipse cx="22" cy="32" rx="6" ry="3.5" fill="#7FB08A" transform="rotate(20 22 32)"/>
+      {[0,45,90,135,180,225,270,315].map((a, i) => (
+        <ellipse key={i} cx={16 + 8 * Math.cos(a * Math.PI/180)} cy={12 + 8 * Math.sin(a * Math.PI/180)}
+          rx="4" ry="6" fill={petal} opacity="0.85"
+          transform={`rotate(${a} ${16 + 8 * Math.cos(a * Math.PI/180)} ${12 + 8 * Math.sin(a * Math.PI/180)})`}/>
+      ))}
+      <circle cx="16" cy="12" r="5" fill={center}/>
+    </svg>
+  )
 }
 
-// Category cell background colors
-const CATEGORY_BG: Record<string, string> = {
-  people:   '#FFF0F4',
-  health:   '#EDF7EF',
-  work:     '#FFFBEA',
-  moments:  '#F5F0FF',
-  nature:   '#EDF7EF',
-  learning: '#F3EEFF',
-  default:  '#F0F6F2',
+function WildflowerSVG({ petal, center, scale = 1 }: { petal: string; center: string; scale?: number }) {
+  const w = 24 * scale, h = 40 * scale
+  return (
+    <svg width={w} height={h} viewBox="0 0 24 40" fill="none">
+      <path d="M12 40 C11 30 13 22 12 14" stroke="#4A7C59" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      <path d="M12 28 C8 24 5 26 7 30 C9 34 12 28 12 28Z" fill="#7FB08A"/>
+      <path d="M12 22 C16 18 19 20 17 24 C15 28 12 22 12 22Z" fill="#7FB08A"/>
+      {[0,60,120,180,240,300].map((a, i) => (
+        <ellipse key={i} cx={12 + 6 * Math.cos(a * Math.PI/180)} cy={10 + 6 * Math.sin(a * Math.PI/180)}
+          rx="3" ry="5" fill={petal} opacity="0.8"
+          transform={`rotate(${a} ${12 + 6 * Math.cos(a * Math.PI/180)} ${10 + 6 * Math.sin(a * Math.PI/180)})`}/>
+      ))}
+      <circle cx="12" cy="10" r="3.5" fill={center}/>
+    </svg>
+  )
+}
+
+function GrassBlade({ x, h, color }: { x: number; h: number; color: string }) {
+  return (
+    <path
+      d={`M${x} 100 C${x - 3} ${100 - h * 0.4} ${x + 2} ${100 - h * 0.7} ${x + 1} ${100 - h}`}
+      stroke={color} strokeWidth="1.5" fill="none" strokeLinecap="round"
+    />
+  )
 }
 
 // ---------------------------------------------------------------------------
-// GardenGrid
+// Placed flower — position + which SVG to render
 // ---------------------------------------------------------------------------
-function GardenGrid({ plants, onPlantClick, newPlantId }: {
+type PlacedFlower = {
+  plant: GardenPlant
+  x: number      // 0–100 percent
+  y: number      // 0–100 percent (within garden scene)
+  scale: number
+  swayDelay: number
+  variant: number // 0=tulip, 1=daisy, 2=wildflower
+}
+
+function placePlants(plants: GardenPlant[]): PlacedFlower[] {
+  return plants.map((plant) => {
+    const rand = seededRand(plant.entryId)
+    const r = rand
+    return {
+      plant,
+      x: 3 + r() * 94,
+      y: 30 + r() * 55,  // keep in lower 70% of scene
+      scale: 0.7 + r() * 0.7,
+      swayDelay: r() * 3000,
+      variant: Math.floor(r() * 3),
+    }
+  })
+}
+
+function FlowerAt({ pf, isNew, onClick }: { pf: PlacedFlower; isNew: boolean; onClick: () => void }) {
+  const colors = FLOWER_COLORS[pf.plant.category] ?? FLOWER_COLORS.default
+  const FlowerComp = [TulipSVG, DaisySVG, WildflowerSVG][pf.variant]
+  return (
+    <div
+      onClick={onClick}
+      title={`${pf.plant.category} · ${new Date(pf.plant.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}`}
+      className={isNew ? 'plant-new' : 'plant-sway'}
+      style={{
+        position: 'absolute',
+        left: `${pf.x}%`,
+        bottom: `${100 - pf.y}%`,
+        transform: 'translateX(-50%)',
+        cursor: 'pointer',
+        animationDelay: isNew ? '0ms' : `${pf.swayDelay}ms`,
+        transformOrigin: 'bottom center',
+        zIndex: Math.round(pf.y),
+        filter: `drop-shadow(0 2px 4px rgba(45,31,20,0.15))`,
+        transition: 'filter 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.filter = 'drop-shadow(0 4px 8px rgba(45,31,20,0.3)) brightness(1.05)'}
+      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.filter = 'drop-shadow(0 2px 4px rgba(45,31,20,0.15))'}
+    >
+      <FlowerComp petal={colors.petal} center={colors.center} scale={pf.scale} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Grass layer — decorative blades across the bottom
+// ---------------------------------------------------------------------------
+function GrassLayer() {
+  const blades = useMemo(() => {
+    const rand = seededRand('grass-layer')
+    const r = rand
+    return Array.from({ length: 80 }, (_, i) => ({
+      x: (i / 80) * 100 + r() * 1.5 - 0.75,
+      h: 6 + r() * 14,
+      color: r() > 0.5 ? '#5A9468' : '#7FB08A',
+    }))
+  }, [])
+
+  return (
+    <svg
+      viewBox="0 0 100 100" preserveAspectRatio="none"
+      style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '18%', pointerEvents: 'none' }}
+    >
+      {blades.map((b, i) => <GrassBlade key={i} x={b.x} h={b.h} color={b.color} />)}
+    </svg>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Garden scene
+// ---------------------------------------------------------------------------
+function GardenScene({ plants, onPlantClick, newPlantId }: {
   plants: GardenPlant[]
   onPlantClick: (p: GardenPlant) => void
   newPlantId?: string | null
 }) {
-  const plantMap = new Map(plants.map((p) => [`${p.x},${p.y}`, p]))
-
-  const maxX = Math.max(...plants.map((p) => p.x), 5)
-  const maxY = Math.max(...plants.map((p) => p.y), 3)
-  const cols = maxX + 1
-  const rows = maxY + 1
+  const placed = useMemo(() => placePlants(plants), [plants])
 
   return (
-    <div className="w-full overflow-auto" style={{ maxHeight: '65vh' }}>
-      <div
-        className="grid gap-2 min-w-max mx-auto p-3"
-        style={{ gridTemplateColumns: `repeat(${cols}, 72px)` }}
-      >
-        {Array.from({ length: rows * cols }, (_, i) => {
-          const x = i % cols
-          const y = Math.floor(i / cols)
-          const plant = plantMap.get(`${x},${y}`)
-          const isNew = plant?.entryId === newPlantId
-          const petalColor = plant ? (CATEGORY_PETAL[plant.category] ?? CATEGORY_PETAL.default) : ''
-          const bgColor = plant ? (CATEGORY_BG[plant.category] ?? CATEGORY_BG.default) : ''
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '60vh',
+        minHeight: '380px',
+        borderRadius: 'var(--radius-xl)',
+        overflow: 'hidden',
+        background: 'linear-gradient(180deg, #c8e6f5 0%, #dff0e8 40%, #b8d9b0 70%, #8ab87a 100%)',
+        boxShadow: 'var(--shadow-lg)',
+      }}
+    >
+      {/* Sky haze */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 80% 50% at 60% 20%, rgba(255,255,220,0.35) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
 
-          return (
-            <div
-              key={`${x},${y}`}
-              className="flex flex-col items-center justify-end transition-all"
-              style={{
-                width: '72px',
-                height: '96px',
-                borderRadius: 'var(--radius-md)',
-                border: plant ? `1px solid ${bgColor}` : '1px dashed var(--color-dewdrop)',
-                background: plant ? bgColor : 'rgba(240,244,240,0.4)',
-                cursor: plant ? 'pointer' : 'default',
-                boxShadow: plant ? 'var(--shadow-sm)' : 'none',
-                transition: 'transform var(--duration-fast) var(--ease-gentle), box-shadow var(--duration-fast) var(--ease-gentle)',
-              }}
-              title={plant
-                ? `${plant.category} · ${new Date(plant.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
-                : ''}
-              onClick={() => plant && onPlantClick(plant)}
-              onMouseEnter={(e) => {
-                if (!plant) return
-                const el = e.currentTarget as HTMLDivElement
-                el.style.transform = 'translateY(-4px) scale(1.05)'
-                el.style.boxShadow = 'var(--shadow-md)'
-              }}
-              onMouseLeave={(e) => {
-                if (!plant) return
-                const el = e.currentTarget as HTMLDivElement
-                el.style.transform = ''
-                el.style.boxShadow = 'var(--shadow-sm)'
-              }}
-            >
-              {plant && (
-                <div
-                  className={isNew ? 'plant-new' : 'plant-sway'}
-                  style={{
-                    animationDelay: isNew ? '0ms' : `${((x * 7 + y * 13) % 10) * 300}ms`,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'center',
-                    paddingBottom: '8px',
-                  }}
-                >
-                  <PlantSVG stage={plant.plantStage} color={petalColor} />
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      {/* Mid-ground hills */}
+      <svg viewBox="0 0 100 30" preserveAspectRatio="none"
+        style={{ position: 'absolute', bottom: '15%', left: 0, width: '100%', height: '30%', pointerEvents: 'none', opacity: 0.5 }}>
+        <path d="M0 30 C10 10 25 5 40 15 C55 25 65 8 80 12 C90 15 95 20 100 18 L100 30Z" fill="#6aaa5a"/>
+      </svg>
+
+      {/* Flowers */}
+      {placed.map((pf) => (
+        <FlowerAt
+          key={pf.plant.entryId}
+          pf={pf}
+          isNew={pf.plant.entryId === newPlantId}
+          onClick={() => onPlantClick(pf.plant)}
+        />
+      ))}
+
+      {/* Grass */}
+      <GrassLayer />
+
+      {/* Ground strip */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '8%',
+        background: 'linear-gradient(180deg, #7aaa60 0%, #5a8a48 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Empty state overlay */}
+      {plants.length === 0 && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '12px',
+        }}>
+          <p style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', color: '#2D4A2D', textShadow: '0 1px 3px rgba(255,255,255,0.6)' }}>
+            Your garden is waiting to grow.
+          </p>
+          <p style={{ fontFamily: 'var(--font-handwriting)', fontSize: '18px', color: '#4A7C59', textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
+            Plant your first gratitude to watch it bloom.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -183,15 +256,9 @@ export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
   const [newPlantId, setNewPlantId] = useState<string | null>(null)
 
   const fetchGarden = useCallback(async () => {
-    if (isGuest) {
-      setPlants(localStore.getPlants())
-      setLoading(false)
-      return
-    }
+    if (isGuest) { setPlants(localStore.getPlants()); setLoading(false); return }
     const { data, error } = await api.garden.get()
-    if (!error && data) {
-      setPlants(data.plants)
-    }
+    if (!error && data) setPlants(data.plants)
     setLoading(false)
   }, [isGuest])
 
@@ -200,22 +267,18 @@ export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
   function handleAdded(newId?: string) {
     if (newId) setNewPlantId(newId)
     fetchGarden()
-    // Clear the "new" highlight after bloom animation
     setTimeout(() => setNewPlantId(null), 1200)
   }
 
   if (loading) {
     return (
       <div className="flex flex-col items-center gap-4 py-16">
-        <div
-          className="w-10 h-10 rounded-full border-4"
-          style={{
-            borderColor: 'var(--color-sage-mist)',
-            borderTopColor: 'var(--color-garden-green)',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-        <p className="text-sm" style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-handwriting)', fontSize: '18px' }}>
+        <div className="w-10 h-10 rounded-full border-4" style={{
+          borderColor: 'var(--color-sage-mist)',
+          borderTopColor: 'var(--color-garden-green)',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{ color: 'var(--color-pebble-gray)', fontFamily: 'var(--font-handwriting)', fontSize: '18px' }}>
           Watering your garden…
         </p>
       </div>
@@ -223,163 +286,56 @@ export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      {/* Garden header stats */}
-      {plants.length > 0 && (
-        <div className="w-full flex items-center justify-between gap-4 px-1">
-          <div>
-            <h1
-              className="text-2xl font-semibold"
-              style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-soil-dark)' }}
-            >
-              Your Garden
-            </h1>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--color-pebble-gray)' }}>
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '24px', fontWeight: 600, color: 'var(--color-soil-dark)' }}>
+            Your Garden
+          </h1>
+          {plants.length > 0 && (
+            <p style={{ fontSize: '14px', color: 'var(--color-pebble-gray)', marginTop: '2px' }}>
               {plants.length} {plants.length === 1 ? 'bloom' : 'blooms'} growing
             </p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-full transition-all"
-            style={{
-              background: 'var(--color-garden-green)',
-              color: 'var(--color-cloud-white)',
-              boxShadow: 'var(--shadow-md)',
-              fontFamily: 'var(--font-body)',
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.background = '#3D6B4A'
-              el.style.transform = 'translateY(-1px)'
-              el.style.boxShadow = 'var(--shadow-lg)'
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.background = 'var(--color-garden-green)'
-              el.style.transform = ''
-              el.style.boxShadow = 'var(--shadow-md)'
-            }}
-            aria-label="Add new gratitude entry"
-          >
-            <span className="text-lg leading-none">+</span>
-            New Entry
-          </button>
+          )}
         </div>
-      )}
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-full"
+          style={{
+            background: 'var(--color-garden-green)',
+            color: 'var(--color-cloud-white)',
+            boxShadow: 'var(--shadow-md)',
+            transition: 'background 0.15s, transform 0.15s, box-shadow 0.15s',
+          }}
+          onMouseEnter={e => { const el = e.currentTarget; el.style.background = '#3D6B4A'; el.style.transform = 'translateY(-1px)'; el.style.boxShadow = 'var(--shadow-lg)' }}
+          onMouseLeave={e => { const el = e.currentTarget; el.style.background = 'var(--color-garden-green)'; el.style.transform = ''; el.style.boxShadow = 'var(--shadow-md)' }}
+          aria-label="Add new gratitude entry"
+        >
+          <span className="text-lg leading-none">+</span>
+          New Entry
+        </button>
+      </div>
 
-      {/* Garden canvas */}
-      {plants.length === 0 ? (
-        <div
-          className="w-full max-w-lg aspect-[4/3] flex flex-col items-center justify-center gap-5 p-8"
-          style={{
-            borderRadius: 'var(--radius-xl)',
-            border: '2px dashed var(--color-sage-mist)',
-            background: 'linear-gradient(160deg, #f0f7f2 0%, var(--color-cloud-white) 100%)',
-          }}
-        >
-          <div style={{ fontSize: '64px', lineHeight: 1 }}>🌿</div>
-          <div className="text-center">
-            <p
-              className="font-semibold text-lg"
-              style={{ fontFamily: 'var(--font-heading)', color: 'var(--color-soil-dark)' }}
-            >
-              Your garden is waiting to grow.
-            </p>
-            <p className="text-sm mt-2" style={{ color: 'var(--color-pebble-gray)' }}>
-              Plant your first gratitude to watch it bloom.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 font-semibold text-sm px-6 py-3 rounded-full transition-all"
-            style={{
-              background: 'var(--color-garden-green)',
-              color: 'var(--color-cloud-white)',
-              boxShadow: 'var(--shadow-md)',
-              fontFamily: 'var(--font-body)',
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.background = '#3D6B4A'
-              el.style.transform = 'translateY(-1px)'
-              el.style.boxShadow = 'var(--shadow-lg)'
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement
-              el.style.background = 'var(--color-garden-green)'
-              el.style.transform = ''
-              el.style.boxShadow = 'var(--shadow-md)'
-            }}
-          >
-            <span className="text-lg leading-none">+</span>
-            Plant a gratitude
-          </button>
-        </div>
-      ) : (
-        <div
-          className="w-full p-4"
-          style={{
-            borderRadius: 'var(--radius-xl)',
-            border: '1px solid var(--color-sage-mist)',
-            background: 'linear-gradient(160deg, #f0f7f2 0%, var(--color-cloud-white) 100%)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <GardenGrid plants={plants} onPlantClick={setSelectedPlant} newPlantId={newPlantId} />
-        </div>
-      )}
+      {/* Immersive garden scene */}
+      <GardenScene plants={plants} onPlantClick={setSelectedPlant} newPlantId={newPlantId} />
 
       {/* Category legend */}
       {plants.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-2">
-          {Object.entries(CATEGORY_BG)
-            .filter(([k]) => k !== 'default' && plants.some((p) => p.category === k))
-            .map(([cat]) => (
-              <span
-                key={cat}
-                className="px-3 py-1 text-xs font-medium capitalize"
-                style={{
-                  borderRadius: 'var(--radius-full)',
-                  background: CATEGORY_BG[cat],
-                  color: 'var(--color-garden-green)',
-                  border: '1px solid var(--color-sage-mist)',
-                }}
-              >
+        <div className="flex flex-wrap gap-2">
+          {Object.keys(FLOWER_COLORS)
+            .filter(k => k !== 'default' && plants.some(p => p.category === k))
+            .map(cat => (
+              <span key={cat} className="px-3 py-1 text-xs font-medium capitalize" style={{
+                borderRadius: 'var(--radius-full)',
+                background: 'var(--color-dewdrop)',
+                color: 'var(--color-garden-green)',
+                border: '1px solid var(--color-sage-mist)',
+              }}>
                 {cat}
               </span>
             ))}
         </div>
-      )}
-
-      {/* Floating add button — shown only when garden not empty (header button handles empty state) */}
-      {plants.length > 0 && (
-        <button
-          onClick={() => setShowModal(true)}
-          className="w-14 h-14 rounded-full text-white text-3xl font-light flex items-center justify-center transition-all"
-          style={{
-            background: 'var(--color-garden-green)',
-            boxShadow: 'var(--shadow-float)',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.background = '#3D6B4A'
-            el.style.transform = 'scale(1.08)'
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement
-            el.style.background = 'var(--color-garden-green)'
-            el.style.transform = ''
-          }}
-          onMouseDown={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.95)'
-          }}
-          onMouseUp={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'
-          }}
-          aria-label="Add new gratitude entry"
-        >
-          +
-        </button>
       )}
 
       {/* Plant detail popover */}
@@ -391,51 +347,29 @@ export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
         >
           <div
             className="w-full max-w-xs p-6"
-            style={{
-              background: 'var(--color-cloud-white)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-float)',
-            }}
-            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--color-cloud-white)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-float)' }}
+            onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-center mb-4">
-              <PlantSVG
-                stage={selectedPlant.plantStage}
-                color={CATEGORY_PETAL[selectedPlant.category] ?? CATEGORY_PETAL.default}
-              />
+              {(() => {
+                const colors = FLOWER_COLORS[selectedPlant.category] ?? FLOWER_COLORS.default
+                const Comp = [TulipSVG, DaisySVG, WildflowerSVG][selectedPlant.plantStage % 3]
+                return <Comp petal={colors.petal} center={colors.center} scale={1.5} />
+              })()}
             </div>
-            <p
-              className="text-center text-xs font-semibold uppercase tracking-wider mb-1 capitalize"
-              style={{ color: 'var(--color-garden-green)' }}
-            >
+            <p className="text-center text-xs font-semibold uppercase tracking-wider mb-1 capitalize"
+              style={{ color: 'var(--color-garden-green)' }}>
               {selectedPlant.category}
             </p>
-            <p
-              className="text-center text-xs"
-              style={{ color: 'var(--color-pebble-gray)' }}
-            >
+            <p className="text-center text-xs" style={{ color: 'var(--color-pebble-gray)' }}>
               {new Date(selectedPlant.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })}
-            </p>
-            <p
-              className="text-center text-xs mt-1"
-              style={{ color: 'var(--color-pebble-gray)' }}
-            >
-              Stage {selectedPlant.plantStage} of 4
             </p>
             <button
               onClick={() => setSelectedPlant(null)}
-              className="mt-5 w-full py-2.5 text-sm font-medium transition-colors rounded-full"
-              style={{
-                border: '1px solid var(--color-sage-mist)',
-                color: 'var(--color-garden-green)',
-                background: 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-dewdrop)'
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-              }}
+              className="mt-5 w-full py-2.5 text-sm font-medium rounded-full"
+              style={{ border: '1px solid var(--color-sage-mist)', color: 'var(--color-garden-green)', background: 'transparent', transition: 'background 0.15s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-dewdrop)'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}
             >
               Close
             </button>
@@ -443,7 +377,6 @@ export default function Garden({ isGuest = false }: { isGuest?: boolean }) {
         </div>
       )}
 
-      {/* Add entry modal */}
       {showModal && (
         <AddEntryModal onClose={() => setShowModal(false)} onAdded={handleAdded} isGuest={isGuest} />
       )}
